@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"slices"
+	"strings"
 )
 
 type apiConfig struct {
@@ -67,12 +69,28 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	w.Write(data)
 }
 
+func replaceBadWords(s string, words []string) string {
+	sep := " "
+	parts := strings.Split(s, sep)
+	for i, p := range parts {
+		lc := strings.ToLower(p)
+		index := slices.Index(words, lc)
+		if index > -1 {
+			parts[i] = "****"
+		}
+	}
+	return strings.Join(parts, sep)
+}
+
 func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
 	type reqBody struct {
 		Body string `json:"body"`
 	}
 	type resBody struct {
-		Valid bool `json:"valid"`
+		CleanedBody string `json:"cleaned_body"`
+	}
+	badWords := []string{
+		"kerfuffle", "sharbert", "fornax",
 	}
 	decoder := json.NewDecoder(r.Body)
 	params := reqBody{}
@@ -88,7 +106,7 @@ func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	res := resBody{
-		Valid: true,
+		CleanedBody: replaceBadWords(params.Body, badWords),
 	}
 	respondWithJSON(w, http.StatusOK, res)
 }
