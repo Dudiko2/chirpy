@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"slices"
-	"strings"
 )
 
 type apiConfig struct {
@@ -69,48 +67,6 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	w.Write(data)
 }
 
-func replaceBadWords(s string, words []string) string {
-	sep := " "
-	parts := strings.Split(s, sep)
-	for i, p := range parts {
-		lc := strings.ToLower(p)
-		index := slices.Index(words, lc)
-		if index > -1 {
-			parts[i] = "****"
-		}
-	}
-	return strings.Join(parts, sep)
-}
-
-func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
-	type reqBody struct {
-		Body string `json:"body"`
-	}
-	type resBody struct {
-		CleanedBody string `json:"cleaned_body"`
-	}
-	badWords := []string{
-		"kerfuffle", "sharbert", "fornax",
-	}
-	decoder := json.NewDecoder(r.Body)
-	params := reqBody{}
-	err := decoder.Decode(&params)
-	if err != nil {
-		log.Printf("Error decoding parameters: %s", err)
-		respondWithError(w, http.StatusInternalServerError, "Internal error")
-		return
-	}
-	textLen := len(params.Body)
-	if textLen > 140 {
-		respondWithError(w, http.StatusBadRequest, "Chirp is too long")
-		return
-	}
-	res := resBody{
-		CleanedBody: replaceBadWords(params.Body, badWords),
-	}
-	respondWithJSON(w, http.StatusOK, res)
-}
-
 func main() {
 	apiCfg := apiConfig{
 		fileserverHits: 0,
@@ -124,7 +80,8 @@ func main() {
 	mux.Handle(appPath+"*", fsHandler)
 	mux.HandleFunc("GET /api/reset", apiCfg.handlerResetMetrics)
 	mux.HandleFunc("GET /api/healthz", handlerHealth)
-	mux.HandleFunc("POST /api/validate_chirp", handlerValidateChirp)
+	mux.HandleFunc("POST /api/chirps", handlerPostChirp)
+	mux.HandleFunc("GET /api/chirps", handlerGetChirps)
 	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)
 	server := http.Server{
 		Addr:    "localhost:" + port,
