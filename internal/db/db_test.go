@@ -30,4 +30,9 @@ func TestNewDB(t *testing.T) {
 		failOnErr(t, err)
 	}
 	t.Logf("Created chirp %v", c)
+	c, err = d.CreateChirp("hello mate")
+	if err != nil {
+		failOnErr(t, err)
+	}
+	t.Logf("Created chirp %v", c)
 }

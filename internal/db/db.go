@@ -22,7 +22,7 @@ type Chirp struct {
 }
 
 func NewDB(path string) (*DB, error) {
-	db := &DB{path: path}
+	db := &DB{path: path, mux: &sync.RWMutex{}}
 	err := db.ensureDB()
 	if err != nil {
 		return &DB{}, err
@@ -36,7 +36,12 @@ func (db *DB) CreateChirp(body string) (Chirp, error) {
 		return Chirp{}, err
 	}
 	newID := 1
-	for _, taken := data.Chirps[newID]; taken; newID++ {
+	for {
+		_, taken := data.Chirps[newID]
+		if !taken {
+			break
+		}
+		newID++
 	}
 	newChirp := Chirp{
 		ID:   uint(newID),
@@ -50,7 +55,17 @@ func (db *DB) CreateChirp(body string) (Chirp, error) {
 	return newChirp, nil
 }
 
-// func (db *DB) GetChirps() ([]Chirp, error) {}
+func (db *DB) GetChirps() ([]Chirp, error) {
+	dbStruct, err := db.loadDB()
+	if err != nil {
+		return []Chirp{}, err
+	}
+	res := make([]Chirp, 0, len(dbStruct.Chirps))
+	for _, c := range dbStruct.Chirps {
+		res = append(res, c)
+	}
+	return res, nil
+}
 
 func (db *DB) ensureDB() error {
 	_, err := os.Stat(db.path)
@@ -72,6 +87,8 @@ func (db *DB) ensureDB() error {
 }
 
 func (db *DB) loadDB() (DBStructure, error) {
+	db.mux.RLock()
+	defer db.mux.RUnlock()
 	data, readErr := os.ReadFile(db.path)
 	if readErr != nil {
 		return DBStructure{}, readErr
@@ -85,6 +102,8 @@ func (db *DB) loadDB() (DBStructure, error) {
 }
 
 func (db *DB) writeDB(dbStruct DBStructure) error {
+	db.mux.Lock()
+	defer db.mux.Unlock()
 	data, err := json.Marshal(dbStruct)
 	if err != nil {
 		return err

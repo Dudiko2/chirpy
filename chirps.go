@@ -6,8 +6,6 @@ import (
 	"net/http"
 	"slices"
 	"strings"
-
-	"github.com/Dudiko2/chirpy/internal/db"
 )
 
 func replaceBadWords(s string, words []string) string {
@@ -43,11 +41,21 @@ func handlerPostChirp(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusBadRequest, "Chirp is too long")
 		return
 	}
-	res := db.Chirp{
-		ID:   1337,
-		Body: replaceBadWords(params.Body, badWords),
+	sanitizedBody := replaceBadWords(params.Body, badWords)
+	chirp, err := database.CreateChirp(sanitizedBody)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "internal error")
+		return
 	}
-	respondWithJSON(w, http.StatusCreated, res)
+	respondWithJSON(w, http.StatusCreated, chirp)
 }
 
-func handlerGetChirps(w http.ResponseWriter, r *http.Request) {}
+func handlerGetChirps(w http.ResponseWriter, r *http.Request) {
+	chirps, err := database.GetChirps()
+	if err != nil {
+		log.Printf("Error getting chirps %v", err)
+		respondWithError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+	respondWithJSON(w, http.StatusOK, chirps)
+}

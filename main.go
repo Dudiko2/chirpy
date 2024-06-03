@@ -5,7 +5,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/Dudiko2/chirpy/internal/db"
 )
+
+var database *db.DB
 
 type apiConfig struct {
 	fileserverHits int
@@ -68,6 +72,11 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 }
 
 func main() {
+	var err error
+	database, err = db.NewDB("database.json")
+	if err != nil {
+		log.Fatal("Failed to start DB", err)
+	}
 	apiCfg := apiConfig{
 		fileserverHits: 0,
 	}

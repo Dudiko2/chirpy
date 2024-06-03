@@ -22,3 +22,5 @@ go.work
 
 # executable
 chirpy
+
+database.json
