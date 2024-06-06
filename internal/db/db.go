@@ -3,9 +3,12 @@ package db
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"sync"
 )
+
+var ErrNotFound = fmt.Errorf("not found")
 
 type DB struct {
 	path string
@@ -65,6 +68,18 @@ func (db *DB) GetChirps() ([]Chirp, error) {
 		res = append(res, c)
 	}
 	return res, nil
+}
+
+func (db *DB) GetChirp(id int) (Chirp, error) {
+	dbStruct, err := db.loadDB()
+	if err != nil {
+		return Chirp{}, err
+	}
+	c, ok := dbStruct.Chirps[id]
+	if !ok {
+		return Chirp{}, ErrNotFound
+	}
+	return c, nil
 }
 
 func (db *DB) ensureDB() error {
