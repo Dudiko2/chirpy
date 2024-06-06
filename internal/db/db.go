@@ -17,11 +17,17 @@ type DB struct {
 
 type DBStructure struct {
 	Chirps map[int]Chirp `json:"chirps"`
+	Users  map[int]User  `json:"users"`
 }
 
 type Chirp struct {
 	ID   uint   `json:"id"`
 	Body string `json:"body"`
+}
+
+type User struct {
+	ID    uint   `json:"id"`
+	Email string `json:"email"`
 }
 
 func NewDB(path string) (*DB, error) {
@@ -33,53 +39,23 @@ func NewDB(path string) (*DB, error) {
 	return db, nil
 }
 
-func (db *DB) CreateChirp(body string) (Chirp, error) {
-	data, err := db.loadDB()
-	if err != nil {
-		return Chirp{}, err
+func NewDBStructure() DBStructure {
+	return DBStructure{
+		Chirps: map[int]Chirp{},
+		Users:  map[int]User{},
 	}
-	newID := 1
+}
+
+func findNextID[V any](coll map[int]V) int {
+	id := 1
 	for {
-		_, taken := data.Chirps[newID]
+		_, taken := coll[id]
 		if !taken {
 			break
 		}
-		newID++
+		id++
 	}
-	newChirp := Chirp{
-		ID:   uint(newID),
-		Body: body,
-	}
-	data.Chirps[newID] = newChirp
-	writeErr := db.writeDB(data)
-	if writeErr != nil {
-		return Chirp{}, writeErr
-	}
-	return newChirp, nil
-}
-
-func (db *DB) GetChirps() ([]Chirp, error) {
-	dbStruct, err := db.loadDB()
-	if err != nil {
-		return []Chirp{}, err
-	}
-	res := make([]Chirp, 0, len(dbStruct.Chirps))
-	for _, c := range dbStruct.Chirps {
-		res = append(res, c)
-	}
-	return res, nil
-}
-
-func (db *DB) GetChirp(id int) (Chirp, error) {
-	dbStruct, err := db.loadDB()
-	if err != nil {
-		return Chirp{}, err
-	}
-	c, ok := dbStruct.Chirps[id]
-	if !ok {
-		return Chirp{}, ErrNotFound
-	}
-	return c, nil
+	return id
 }
 
 func (db *DB) ensureDB() error {
@@ -130,8 +106,62 @@ func (db *DB) writeDB(dbStruct DBStructure) error {
 	return nil
 }
 
-func NewDBStructure() DBStructure {
-	return DBStructure{
-		Chirps: map[int]Chirp{},
+func (db *DB) CreateChirp(body string) (Chirp, error) {
+	data, err := db.loadDB()
+	if err != nil {
+		return Chirp{}, err
 	}
+	newID := findNextID(data.Chirps)
+	newChirp := Chirp{
+		ID:   uint(newID),
+		Body: body,
+	}
+	data.Chirps[newID] = newChirp
+	writeErr := db.writeDB(data)
+	if writeErr != nil {
+		return Chirp{}, writeErr
+	}
+	return newChirp, nil
+}
+
+func (db *DB) GetChirps() ([]Chirp, error) {
+	dbStruct, err := db.loadDB()
+	if err != nil {
+		return []Chirp{}, err
+	}
+	res := make([]Chirp, 0, len(dbStruct.Chirps))
+	for _, c := range dbStruct.Chirps {
+		res = append(res, c)
+	}
+	return res, nil
+}
+
+func (db *DB) GetChirp(id int) (Chirp, error) {
+	dbStruct, err := db.loadDB()
+	if err != nil {
+		return Chirp{}, err
+	}
+	c, ok := dbStruct.Chirps[id]
+	if !ok {
+		return Chirp{}, ErrNotFound
+	}
+	return c, nil
+}
+
+func (db *DB) CreateUser(email string) (User, error) {
+	data, err := db.loadDB()
+	if err != nil {
+		return User{}, err
+	}
+	newID := findNextID(data.Users)
+	newUser := User{
+		ID:    uint(newID),
+		Email: email,
+	}
+	data.Users[newID] = newUser
+	writeErr := db.writeDB(data)
+	if writeErr != nil {
+		return User{}, writeErr
+	}
+	return newUser, nil
 }

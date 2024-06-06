@@ -92,6 +92,7 @@ func main() {
 	mux.HandleFunc("POST /api/chirps", handlerPostChirp)
 	mux.HandleFunc("GET /api/chirps", handlerGetChirps)
 	mux.HandleFunc("GET /api/chirps/{chirpID}", handlerGetChirp)
+	mux.HandleFunc("POST /api/users", handlerPostUser)
 	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)
 	server := http.Server{
 		Addr:    "localhost:" + port,
