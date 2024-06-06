@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -73,7 +74,13 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 
 func main() {
 	var err error
-	database, err = db.NewDB("database.json")
+	dbg := flag.Bool("debug", false, "Enable debug mode")
+	flag.Parse()
+	dbPath := "database.json"
+	if *dbg {
+		db.RemoveDB(dbPath)
+	}
+	database, err = db.NewDB(dbPath)
 	if err != nil {
 		log.Fatal("Failed to start DB", err)
 	}

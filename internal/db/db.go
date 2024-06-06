@@ -39,6 +39,10 @@ func NewDB(path string) (*DB, error) {
 	return db, nil
 }
 
+func RemoveDB(path string) error {
+	return os.Remove(path)
+}
+
 func NewDBStructure() DBStructure {
 	return DBStructure{
 		Chirps: map[int]Chirp{},
