@@ -9,6 +9,7 @@ import (
 )
 
 var ErrNotFound = fmt.Errorf("not found")
+var ErrEmailTaken = fmt.Errorf("email already taken")
 
 type DB struct {
 	path string
@@ -26,8 +27,9 @@ type Chirp struct {
 }
 
 type User struct {
-	ID    uint   `json:"id"`
-	Email string `json:"email"`
+	ID       uint   `json:"id"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 func NewDB(path string) (*DB, error) {
@@ -48,6 +50,15 @@ func NewDBStructure() DBStructure {
 		Chirps: map[int]Chirp{},
 		Users:  map[int]User{},
 	}
+}
+
+func (dbStruct *DBStructure) getUserByEmail(email string) (User, bool) {
+	for _, u := range dbStruct.Users {
+		if u.Email == email {
+			return u, true
+		}
+	}
+	return User{}, false
 }
 
 func findNextID[V any](coll map[int]V) int {
@@ -110,6 +121,18 @@ func (db *DB) writeDB(dbStruct DBStructure) error {
 	return nil
 }
 
+func (db *DB) GetUserByEmail(email string) (User, error) {
+	data, err := db.loadDB()
+	if err != nil {
+		return User{}, err
+	}
+	u, exists := data.getUserByEmail(email)
+	if !exists {
+		return User{}, ErrNotFound
+	}
+	return u, nil
+}
+
 func (db *DB) CreateChirp(body string) (Chirp, error) {
 	data, err := db.loadDB()
 	if err != nil {
@@ -152,15 +175,20 @@ func (db *DB) GetChirp(id int) (Chirp, error) {
 	return c, nil
 }
 
-func (db *DB) CreateUser(email string) (User, error) {
+func (db *DB) CreateUser(email, password string) (User, error) {
 	data, err := db.loadDB()
 	if err != nil {
 		return User{}, err
 	}
+	_, exists := data.getUserByEmail(email)
+	if exists {
+		return User{}, ErrEmailTaken
+	}
 	newID := findNextID(data.Users)
 	newUser := User{
-		ID:    uint(newID),
-		Email: email,
+		ID:       uint(newID),
+		Email:    email,
+		Password: password,
 	}
 	data.Users[newID] = newUser
 	writeErr := db.writeDB(data)

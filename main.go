@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/Dudiko2/chirpy/internal/db"
+	"github.com/joho/godotenv"
 )
 
 var database *db.DB
@@ -72,7 +73,19 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	w.Write(data)
 }
 
+func parseBodyJSON[V any](r *http.Request) (V, error) {
+	decoder := json.NewDecoder(r.Body)
+	var params V
+	err := decoder.Decode(&params)
+	if err != nil {
+		var empty V
+		return empty, err
+	}
+	return params, err
+}
+
 func main() {
+	godotenv.Load()
 	var err error
 	dbg := flag.Bool("debug", false, "Enable debug mode")
 	flag.Parse()
@@ -100,6 +113,7 @@ func main() {
 	mux.HandleFunc("GET /api/chirps", handlerGetChirps)
 	mux.HandleFunc("GET /api/chirps/{chirpID}", handlerGetChirp)
 	mux.HandleFunc("POST /api/users", handlerPostUser)
+	mux.HandleFunc("POST /api/login", handlerLogin)
 	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)
 	server := http.Server{
 		Addr:    "localhost:" + port,

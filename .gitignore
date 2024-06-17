@@ -24,3 +24,5 @@ go.work
 chirpy
 
 database.json
+
+.env
